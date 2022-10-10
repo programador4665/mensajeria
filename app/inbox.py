@@ -1,3 +1,4 @@
+from email import message
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, url_for, current_app, send_file
 )
@@ -18,8 +19,9 @@ def getDB():
 def show():
     db = get_db()
     messages = db.execute(
-        'SELECT * FROM message WHERE to_id = ? or from_id=?' ,(g.user['to_id'],g.user['to_id']) # QUERY
+        'SELECT * FROM message where to_id = ?', (g.user['id'],)
     ).fetchall()
+    
 
     return render_template('inbox/show.html', messages=messages)
 
@@ -29,10 +31,11 @@ def show():
 def send():
     if request.method == 'POST':        
         from_id = g.user['id']
-        to_username = g.user['to_id']
-        subject = g.user['subject']
-        body = g.user['body']
-
+        to_username = request.form['to']
+        subject = request.form['subject']
+        body = request.form['body']
+        print('llega send')
+        print(to_username)
         db = get_db()
        
         if not to_username:
@@ -51,7 +54,7 @@ def send():
         userto = None 
         
         userto = db.execute( #query
-            'SELECT * FROM message WHERE to_id = ?' , (to_username,)
+            'SELECT * FROM user WHERE username = ?' , (to_username,)
         ).fetchone()
         
         if userto is None:
@@ -62,7 +65,7 @@ def send():
         else:
             db = get_db()
             db.execute(
-                'INSERT INTO message set (from_id,to_id,subject,body) values(?,?,?,?)',
+                'INSERT INTO message (from_id,to_id,subject,body) values(?,?,?,?)',
                 (g.user['id'], userto['id'], subject, body)
             )
             db.commit()
