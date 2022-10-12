@@ -17,9 +17,10 @@ def getDB():
 @bp.route('/show')
 @login_required
 def show():
+    print(g.user['id'])
     db = get_db()
     messages = db.execute(
-        'SELECT * FROM message where to_id = ?', (g.user['id'],)
+        'SELECT m.subject, u.username, m.created, m.body FROM message m, user u where m.to_id = ? and u.id=?', (g.user['id'], g.user['id'])
     ).fetchall()
     
 

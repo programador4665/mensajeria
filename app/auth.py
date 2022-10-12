@@ -155,19 +155,15 @@ def confirm():
             db = get_db()
             
             attempt = db.execute( 
-                'SELECT * FROM forgotlink where challenge=? and state = ?', (authid, utils.F_ACTIVE)
+                'SELECT * FROM forgotlink WHERE challenge=? and state = ? and  CURRENT_TIMESTAMP BETWEEN created AND validuntil', (authid, utils.F_ACTIVE)
             ).fetchone()
-            print('entra1')
+            
             if attempt is not None:
                 db.execute(
-                    'update forgotlink set state=? where userid=?', (utils.F_INACTIVE, attempt['id'])
-                )
-                print('entra2')
+                    'UPDATE forgotlink SET state=? WHERE id=?', (utils.F_INACTIVE, attempt['id']))
                 salt = hex(random.getrandbits(128))[2:]
                 hashP = generate_password_hash(password + salt)
-                db.execute(
-                    'UPDATE user set (password=?,salt=?) WHERE id=?', (hashP, salt, attempt['userid'])
-                )
+                db.execute('UPDATE user SET password=?, salt=? WHERE id=?', (hashP, salt, attempt['userid']))
                 db.commit()
                 return redirect(url_for('auth.login'))
             else:
@@ -187,17 +183,18 @@ def change():
 
         if request.method == 'GET':
             number = request.args['auth']
-            
+             
             db = get_db()
             attempt = db.execute(
                 'select * from forgotlink where challenge=? and state=? and  CURRENT_TIMESTAMP BETWEEN created AND validuntil',  (number, utils.F_ACTIVE)
             ).fetchone()
+            
             if attempt is not None:
                 return render_template('auth/change.html', number=number)
-            print('aqui va')
+                print('aqui va')
         return render_template('auth/forgot.html')
     except:
-        return render_template('auth/login.html')
+        return render_template('auth/forgot.html')
 
 
 @bp.route('/forgot', methods=('GET', 'POST'))
@@ -222,17 +219,11 @@ def forgot():
             if user is not None:
                 number = hex(random.getrandbits(512))[2:]
                 
-                db.execute(
-                   'update activationlink set state=? where id=?',
-                   #'INSERT INTO forgotlink (state,userid) values (?,?)' ,
-                    (utils.F_INACTIVE, user['id'])
-                )
+                db.execute('UPDATE forgotlink SET state=? WHERE userid=?',
+                   (utils.F_INACTIVE, user['id']))
                 
-                db.execute(
-                    'INSERT INTO forgotlink (userid,challenge,state) values (?,?,?)' ,
-                    #'update activationlink set state=? where id=?'
-                    (user['id'], number, utils.F_ACTIVE)
-                )
+                db.execute('INSERT INTO forgotlink (userid,challenge,state) values (?,?,?)' ,
+                    (user['id'], number, utils.F_ACTIVE))
                 db.commit()
                 
                 credentials = db.execute(
